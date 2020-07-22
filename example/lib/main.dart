@@ -66,47 +66,65 @@ class _MyAppState extends State<MyApp> {
         ),
         body: Column(
           children: <Widget>[
-            Expanded(
-              child: Row(
-                children: <Widget>[
-                  Cell("Yes"),
-                  Cell("No"),
-                ],
+            Container(
+              child: Text(
+                "Say one of the words below!",
+                style: TextStyle(color: Colors.white, fontSize: 16),
               ),
+              padding: EdgeInsets.all(10),
+              color: Color(0xFFFFA800),
+              alignment: Alignment.center,
             ),
             Expanded(
-              child: Row(
-                children: <Widget>[
-                  Cell("Up"),
-                  Cell("Down"),
-                ],
-              ),
+              child: Row(children: <Widget>[Cell("Yes"), Cell("No")]),
             ),
             Expanded(
-              child: Row(
-                children: <Widget>[
-                  Cell("Left"),
-                  Cell("Right"),
-                ],
-              ),
+              child: Row(children: <Widget>[Cell("Up"), Cell("Down")]),
             ),
             Expanded(
-              child: Row(
-                children: <Widget>[
-                  Cell("On"),
-                  Cell("Off"),
-                ],
-              ),
+              child: Row(children: <Widget>[Cell("Left"), Cell("Right")]),
             ),
             Expanded(
-              child: Row(
-                children: <Widget>[
-                  Cell("Stop"),
-                  Cell("Go"),
-                ],
-              ),
+              child: Row(children: <Widget>[Cell("On"), Cell("Off")]),
             ),
+            Expanded(
+              child: Row(children: <Widget>[Cell("Stop"), Cell("Go")]),
+            ),
+            SizedBox(height: 100)
           ],
+        ),
+        bottomSheet: Container(
+          color: Colors.white,
+          child: Padding(
+            padding: EdgeInsets.all(8),
+            child: Padding(
+              padding: EdgeInsets.only(top: 10, bottom: 10),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Image.asset(
+                    'images/icn_chevron_up.png',
+                    fit: BoxFit.scaleDown,
+                    height: 8,
+                  ),
+                  SizedBox(height: 10),
+                  Row(children: <Widget>[
+                    Text("Sample Rate"),
+                    Spacer(),
+                    Text("16000 Hz"),
+                  ]),
+                  SizedBox(height: 10),
+                  Row(children: <Widget>[
+                    Text("Inference Time"),
+                    Spacer(),
+                    Text("32ms"),
+                  ]),
+                  SizedBox(height: 8),
+                  Container(height: 1, color: Color(0xFFAAAAAA))
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -124,8 +142,6 @@ class Cell extends StatelessWidget {
         super(key: key);
 
   /// The text to display.
-  ///
-  /// This will be null if a [textSpan] is provided instead.
   final String data;
 
   @override
@@ -136,11 +152,9 @@ class Cell extends StatelessWidget {
         margin: EdgeInsets.all(10),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-            border: Border.all(
-              width: 1,
-              color: Color(0xFFAAAAAA),
-            ),
-            borderRadius: BorderRadius.all(Radius.circular(5))),
+          border: Border.all(width: 1, color: Color(0xFFAAAAAA)),
+          borderRadius: BorderRadius.all(Radius.circular(5)),
+        ),
       ),
     );
   }
