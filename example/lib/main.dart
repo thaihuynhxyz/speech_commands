@@ -64,9 +64,83 @@ class _MyAppState extends State<MyApp> {
             alignment: Alignment.centerLeft,
           ),
         ),
-        body: Center(
-          child: Text('Running on: $_platformVersion\n'),
+        body: Column(
+          children: <Widget>[
+            Expanded(
+              child: Row(
+                children: <Widget>[
+                  Cell("Yes"),
+                  Cell("No"),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Row(
+                children: <Widget>[
+                  Cell("Up"),
+                  Cell("Down"),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Row(
+                children: <Widget>[
+                  Cell("Left"),
+                  Cell("Right"),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Row(
+                children: <Widget>[
+                  Cell("On"),
+                  Cell("Off"),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Row(
+                children: <Widget>[
+                  Cell("Stop"),
+                  Cell("Go"),
+                ],
+              ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+}
+
+class Cell extends StatelessWidget {
+  const Cell(
+    this.data, {
+    Key key,
+  })  : assert(
+          data != null,
+          'A non-null String must be provided to a Text widget.',
+        ),
+        super(key: key);
+
+  /// The text to display.
+  ///
+  /// This will be null if a [textSpan] is provided instead.
+  final String data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        child: Text(data),
+        margin: EdgeInsets.all(10),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+            border: Border.all(
+              width: 1,
+              color: Color(0xFFAAAAAA),
+            ),
+            borderRadius: BorderRadius.all(Radius.circular(5))),
       ),
     );
   }
