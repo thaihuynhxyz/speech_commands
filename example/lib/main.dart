@@ -45,9 +45,24 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      theme: ThemeData(
+        primaryColor: Color(0xFFFFA800),
+        primaryColorDark: Color(0xFFFF6F00),
+        accentColor: Color(0xFF425066),
+      ),
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('Plugin example app'),
+          titleSpacing: 0,
+          title: Container(
+            color: Colors.white,
+            child: Image.asset(
+              'images/tfl2_logo_dark.png',
+              fit: BoxFit.scaleDown,
+              height: 32,
+            ),
+            padding: EdgeInsets.all(16),
+            alignment: Alignment.centerLeft,
+          ),
         ),
         body: Center(
           child: Text('Running on: $_platformVersion\n'),
