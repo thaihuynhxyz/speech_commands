@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'dart:async';
 
 import 'package:flutter/services.dart';
@@ -64,67 +65,39 @@ class _MyAppState extends State<MyApp> {
             alignment: Alignment.centerLeft,
           ),
         ),
-        body: Column(
-          children: <Widget>[
-            Container(
-              child: Text(
-                "Say one of the words below!",
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-              padding: EdgeInsets.all(10),
-              color: Color(0xFFFFA800),
-              alignment: Alignment.center,
-            ),
-            Expanded(
-              child: Row(children: <Widget>[Cell("Yes"), Cell("No")]),
-            ),
-            Expanded(
-              child: Row(children: <Widget>[Cell("Up"), Cell("Down")]),
-            ),
-            Expanded(
-              child: Row(children: <Widget>[Cell("Left"), Cell("Right")]),
-            ),
-            Expanded(
-              child: Row(children: <Widget>[Cell("On"), Cell("Off")]),
-            ),
-            Expanded(
-              child: Row(children: <Widget>[Cell("Stop"), Cell("Go")]),
-            ),
-            SizedBox(height: 100)
-          ],
-        ),
-        bottomSheet: Container(
-          color: Colors.white,
-          child: Padding(
-            padding: EdgeInsets.all(8),
-            child: Padding(
-              padding: EdgeInsets.only(top: 10, bottom: 10),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Image.asset(
-                    'images/icn_chevron_up.png',
-                    fit: BoxFit.scaleDown,
-                    height: 8,
+        body: Stack(
+          children: [
+            Column(
+              children: <Widget>[
+                Container(
+                  child: Text(
+                    "Say one of the words below!",
+                    style: TextStyle(color: Colors.white, fontSize: 16),
                   ),
-                  SizedBox(height: 10),
-                  Row(children: <Widget>[
-                    Text("Sample Rate"),
-                    Spacer(),
-                    Text("16000 Hz"),
-                  ]),
-                  SizedBox(height: 10),
-                  Row(children: <Widget>[
-                    Text("Inference Time"),
-                    Spacer(),
-                    Text("32ms"),
-                  ]),
-                  SizedBox(height: 8),
-                  Container(height: 1, color: Color(0xFFAAAAAA))
-                ],
-              ),
+                  padding: EdgeInsets.all(10),
+                  color: Color(0xFFFFA800),
+                  alignment: Alignment.center,
+                ),
+                Expanded(
+                  child: Row(children: <Widget>[Cell("Yes"), Cell("No")]),
+                ),
+                Expanded(
+                  child: Row(children: <Widget>[Cell("Up"), Cell("Down")]),
+                ),
+                Expanded(
+                  child: Row(children: <Widget>[Cell("Left"), Cell("Right")]),
+                ),
+                Expanded(
+                  child: Row(children: <Widget>[Cell("On"), Cell("Off")]),
+                ),
+                Expanded(
+                  child: Row(children: <Widget>[Cell("Stop"), Cell("Go")]),
+                ),
+                SizedBox(height: 100)
+              ],
             ),
-          ),
+            Sheet(),
+          ],
         ),
       ),
     );
@@ -155,6 +128,110 @@ class Cell extends StatelessWidget {
           border: Border.all(width: 1, color: Color(0xFFAAAAAA)),
           borderRadius: BorderRadius.all(Radius.circular(5)),
         ),
+      ),
+    );
+  }
+}
+
+class Sheet extends StatefulWidget {
+  @override
+  _SheetState createState() {
+    return _SheetState();
+  }
+}
+
+class _SheetState extends State<Sheet> {
+  String _image = 'images/icn_chevron_up.png';
+
+  @override
+  Widget build(BuildContext context) {
+    var height = MediaQuery.of(context).size.height - 24 - 56;
+    return NotificationListener<DraggableScrollableNotification>(
+      onNotification: (DraggableScrollableNotification notification) {
+        if (notification.extent >
+            (notification.maxExtent + notification.minExtent) / 2) {
+          _image = 'images/icn_chevron_down.png';
+        } else {
+          _image = 'images/icn_chevron_up.png';
+        }
+        return true;
+      },
+      child: DraggableScrollableSheet(
+        initialChildSize: 96 / height,
+        minChildSize: 96 / height,
+        maxChildSize: 144 / height,
+        builder: (BuildContext context, ScrollController scrollController) {
+          _scrollListener() {
+            var position = scrollController.position;
+            if (position.userScrollDirection == ScrollDirection.reverse) {
+              _image = 'images/icn_chevron_down.png';
+            } else if (position.userScrollDirection ==
+                ScrollDirection.forward) {
+              _image = 'images/icn_chevron_up.png';
+            }
+          }
+
+          scrollController.addListener(_scrollListener);
+          return SingleChildScrollView(
+            controller: scrollController,
+            child: Container(
+              color: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Image.asset(
+                        _image,
+                        fit: BoxFit.scaleDown,
+                        height: 5,
+                      ),
+                      SizedBox(height: 10),
+                      Row(children: <Widget>[
+                        Text("Sample Rate"),
+                        Spacer(),
+                        Text("16000 Hz"),
+                      ]),
+                      SizedBox(height: 10),
+                      Row(children: <Widget>[
+                        Text("Inference Time"),
+                        Spacer(),
+                        Text("32ms"),
+                      ]),
+                      SizedBox(height: 8),
+                      Container(height: 1, color: Color(0xFFAAAAAA)),
+                      Padding(
+                        padding: EdgeInsets.only(top: 10),
+                        child: Row(
+                          children: [
+                            Text("Threads"),
+                            Spacer(),
+                            Padding(
+                              padding: EdgeInsets.all(4),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.remove),
+                                  Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 10),
+                                    child: Text('1'),
+                                  ),
+                                  Icon(Icons.add),
+                                ],
+                              ),
+                            )
+                          ],
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
