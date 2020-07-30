@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:speech_commands/speech_commands.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:speech_commands_example/recognize_commands.dart';
 
 void main() {
   runApp(MyApp());
@@ -15,32 +18,50 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String _platformVersion = 'Unknown';
+  // Constants that control the behavior of the recognition code and model
+  // settings. See the audio recognition tutorial for a detailed explanation of
+  // all these, but you should customize them to match your training settings if
+  // you are running your own model.
+  static const int SAMPLE_RATE = 16000;
+  static const int SAMPLE_DURATION_MS = 1000;
+
+//   static const int RECORDING_LENGTH =  SAMPLE_RATE * SAMPLE_DURATION_MS / 1000;
+  static const int AVERAGE_WINDOW_DURATION_MS = 1000;
+  static const double DETECTION_THRESHOLD = 0.5;
+  static const int SUPPRESSION_MS = 1500;
+  static const int MINIMUM_COUNT = 3;
+  static const int MINIMUM_TIME_BETWEEN_SAMPLES_MS = 30;
+  static const String MODEL_FILENAME = 'models/conv_actions_frozen.tflite';
+
+  dynamic _labels = new List<String>();
+  dynamic _displayedLabels = new List<String>();
+  RecognizeCommands _recognizeCommands;
 
   @override
   void initState() {
     super.initState();
     initPlatformState();
+    loadLabel();
+
+    // Set up an object to smooth recognition results to increase accuracy.
+    _recognizeCommands = RecognizeCommands(
+        _labels,
+        AVERAGE_WINDOW_DURATION_MS,
+        DETECTION_THRESHOLD,
+        SUPPRESSION_MS,
+        MINIMUM_COUNT,
+        MINIMUM_TIME_BETWEEN_SAMPLES_MS);
   }
 
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPlatformState() async {
-    String platformVersion;
     // Platform messages may fail, so we use a try/catch PlatformException.
-    try {
-      platformVersion = await SpeechCommands.platformVersion;
-    } on PlatformException {
-      platformVersion = 'Failed to get platform version.';
-    }
+    await SpeechCommands.load(MODEL_FILENAME);
 
     // If the widget was removed from the tree while the asynchronous platform
     // message was in flight, we want to discard the reply rather than calling
     // setState to update our non-existent appearance.
     if (!mounted) return;
-
-    setState(() {
-      _platformVersion = platformVersion;
-    });
   }
 
   @override
@@ -71,7 +92,8 @@ class _MyAppState extends State<MyApp> {
               children: <Widget>[
                 Container(
                   child: Text(
-                    "Say one of the words below!",
+                    _displayedLabels.join(', '),
+//                    "Say one of the words below!",
                     style: TextStyle(color: Colors.white, fontSize: 16),
                   ),
                   padding: EdgeInsets.all(10),
@@ -101,6 +123,19 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
     );
+  }
+
+  Future<String> loadLabel() async {
+    var label = await rootBundle.loadString('models/conv_actions_labels.txt');
+    setState(() {
+      // Load the labels for the model, but only display those that don't start
+      // with an underscore.
+      _labels = LineSplitter().convert(label);
+      _displayedLabels = _labels
+          .where((value) => !value.startsWith('_'))
+          .map((e) => '${e.substring(0, 1).toUpperCase()}${e.substring(1)}');
+    });
+    return label;
   }
 }
 
@@ -157,9 +192,9 @@ class _SheetState extends State<Sheet> {
         return true;
       },
       child: DraggableScrollableSheet(
-        initialChildSize: 96 / height,
-        minChildSize: 96 / height,
-        maxChildSize: 144 / height,
+        initialChildSize: 88 / height,
+        minChildSize: 88 / height,
+        maxChildSize: 156 / height,
         builder: (BuildContext context, ScrollController scrollController) {
           _scrollListener() {
             var position = scrollController.position;
@@ -208,7 +243,7 @@ class _SheetState extends State<Sheet> {
                           children: [
                             Text("Threads"),
                             Spacer(),
-                            Padding(
+                            Container(
                               padding: EdgeInsets.all(4),
                               child: Row(
                                 children: [
@@ -221,10 +256,16 @@ class _SheetState extends State<Sheet> {
                                   Icon(Icons.add),
                                 ],
                               ),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                    width: 1, color: Color(0xFFAAAAAA)),
+                              ),
                             )
                           ],
                         ),
-                      )
+                      ),
+                      SizedBox(height: 10),
+                      Container(height: 1, color: Color(0xFFAAAAAA)),
                     ],
                   ),
                 ),

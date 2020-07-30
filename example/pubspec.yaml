@@ -24,6 +24,8 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^0.1.3
 
+  tuple: ^1.0.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -43,6 +45,8 @@ flutter:
     - images/tfl2_logo_dark.png
     - images/icn_chevron_up.png
     - images/icn_chevron_down.png
+    - models/conv_actions_labels.txt
+    - models/conv_actions_frozen.tflite
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.
