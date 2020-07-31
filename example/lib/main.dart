@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'dart:async';
@@ -7,6 +9,8 @@ import 'package:flutter/services.dart';
 import 'package:speech_commands/speech_commands.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:speech_commands_example/recognize_commands.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:developer' as developer;
 
 void main() {
   runApp(MyApp());
@@ -36,6 +40,7 @@ class _MyAppState extends State<MyApp> {
   dynamic _labels = new List<String>();
   dynamic _displayedLabels = new List<String>();
   RecognizeCommands _recognizeCommands;
+  PermissionStatus _permissionStatus = PermissionStatus.undetermined;
 
   @override
   void initState() {
@@ -51,6 +56,8 @@ class _MyAppState extends State<MyApp> {
         SUPPRESSION_MS,
         MINIMUM_COUNT,
         MINIMUM_TIME_BETWEEN_SAMPLES_MS);
+
+    startRecording();
   }
 
   // Platform messages are asynchronous, so we initialize in an async method.
@@ -136,6 +143,30 @@ class _MyAppState extends State<MyApp> {
           .map((e) => '${e.substring(0, 1).toUpperCase()}${e.substring(1)}');
     });
     return label;
+  }
+
+  void startRecording() {
+    if (_permissionStatus == PermissionStatus.granted) {
+      developer.log('startRecording');
+    } else {
+      requestPermission(Permission.speech);
+    }
+  }
+
+  Future<void> requestPermission(Permission permission) async {
+    final status = await permission.status;
+    setState(() => _permissionStatus = status);
+
+    if (status == PermissionStatus.granted) {
+      startRecording();
+    } else {
+      final status = await permission.request();
+
+      setState(() {
+        _permissionStatus = status;
+        if (status == PermissionStatus.granted) startRecording();
+      });
+    }
   }
 }
 
@@ -273,6 +304,50 @@ class _SheetState extends State<Sheet> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// Example Flutter Application demonstrating the functionality of the
+/// Permission Handler plugin.
+class PermissionApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          title: const Text('Plugin example app'),
+          actions: <Widget>[
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: () async {
+                var hasOpened = openAppSettings();
+                debugPrint('App Settings opened: ' + hasOpened.toString());
+              },
+            )
+          ],
+        ),
+        body: Center(
+          child: ListView(
+              children: Permission.values
+                  .where((Permission permission) {
+                    if (Platform.isIOS) {
+                      return permission != Permission.unknown &&
+                          permission != Permission.sms &&
+                          //permission != Permission.storage &&
+                          permission != Permission.ignoreBatteryOptimizations &&
+                          permission != Permission.accessMediaLocation;
+                    } else {
+                      return permission != Permission.unknown &&
+                          permission != Permission.mediaLibrary &&
+                          permission != Permission.photos &&
+                          permission != Permission.reminders;
+                    }
+                  })
+                  .map((permission) => PermissionWidget(permission))
+                  .toList()),
+        ),
       ),
     );
   }

@@ -37,10 +37,21 @@ public class SpeechCommandsPlugin implements FlutterPlugin, MethodCallHandler {
 
     private AssetManager assetManager;
 
+    // Constants that control the behavior of the recognition code and model
+    // settings. See the audio recognition tutorial for a detailed explanation of
+    // all these, but you should customize them to match your training settings if
+    // you are running your own model.
+    private static final int SAMPLE_RATE = 16000;
+    private static final int SAMPLE_DURATION_MS = 1000;
+    private static final int RECORDING_LENGTH = SAMPLE_RATE * SAMPLE_DURATION_MS / 1000;
+
     private Interpreter tfLite;
 
     void load(String model) throws IOException {
         tfLite = new Interpreter(loadModelFile(FlutterLoader.getInstance().getLookupKeyForAsset(model)).asReadOnlyBuffer());
+
+        tfLite.resizeInput(0, new int[]{RECORDING_LENGTH, 1});
+        tfLite.resizeInput(1, new int[]{1});
     }
 
     private MappedByteBuffer loadModelFile(String modelPath) throws IOException {
