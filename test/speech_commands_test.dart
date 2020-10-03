@@ -18,6 +18,6 @@ void main() {
   });
 
   test('getPlatformVersion', () async {
-    expect(await SpeechCommands.platformVersion, '42');
+    expect(nativeAdd(1, 2), 3);
   });
 }
