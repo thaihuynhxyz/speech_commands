@@ -2,8 +2,20 @@ package org.demen.speech_commands;
 
 import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
+import android.media.AudioFormat;
+import android.media.AudioRecord;
+import android.media.MediaRecorder;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
+
+import org.tensorflow.lite.Interpreter;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.concurrent.locks.ReentrantLock;
 
 import io.flutter.embedding.engine.loader.FlutterLoader;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
@@ -11,21 +23,12 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
-import io.flutter.plugin.common.PluginRegistry.Registrar;
-
-import org.tensorflow.lite.Interpreter;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.Objects;
 
 /**
  * SpeechCommandsPlugin
  */
 public class SpeechCommandsPlugin implements FlutterPlugin, MethodCallHandler {
+    private static final String LOG_TAG = SpeechCommandsPlugin.class.getSimpleName();
 
     private static volatile SpeechCommandsPlugin instance;
 
@@ -45,14 +48,12 @@ public class SpeechCommandsPlugin implements FlutterPlugin, MethodCallHandler {
     private static final int SAMPLE_DURATION_MS = 1000;
     private static final int RECORDING_LENGTH = SAMPLE_RATE * SAMPLE_DURATION_MS / 1000;
 
-    private Interpreter tfLite;
-
-    void load(String model) throws IOException {
-        tfLite = new Interpreter(loadModelFile(FlutterLoader.getInstance().getLookupKeyForAsset(model)).asReadOnlyBuffer());
-
-        tfLite.resizeInput(0, new int[]{RECORDING_LENGTH, 1});
-        tfLite.resizeInput(1, new int[]{1});
-    }
+    // Working variables.
+    short[] recordingBuffer = new short[RECORDING_LENGTH];
+    int recordingOffset = 0;
+    boolean shouldContinue = true;
+    private Thread recordingThread;
+    private final ReentrantLock recordingBufferLock = new ReentrantLock();
 
     private MappedByteBuffer loadModelFile(String modelPath) throws IOException {
         AssetFileDescriptor fileDescriptor = assetManager.openFd(modelPath);
@@ -65,7 +66,7 @@ public class SpeechCommandsPlugin implements FlutterPlugin, MethodCallHandler {
 
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
-        channel = new MethodChannel(flutterPluginBinding.getFlutterEngine().getDartExecutor(), "speech_commands");
+        channel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "speech_commands");
         channel.setMethodCallHandler(this);
         assetManager = flutterPluginBinding.getApplicationContext().getAssets();
     }
@@ -83,6 +84,15 @@ public class SpeechCommandsPlugin implements FlutterPlugin, MethodCallHandler {
                 }
                 break;
             }
+            case "record": {
+                try {
+                    startRecording();
+                    result.success(null);
+                } catch (Exception e) {
+                    result.error("recordError", e.getMessage(), e.getCause());
+                }
+                break;
+            }
             default:
                 result.notImplemented();
         }
@@ -91,6 +101,83 @@ public class SpeechCommandsPlugin implements FlutterPlugin, MethodCallHandler {
     @Override
     public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
         channel.setMethodCallHandler(null);
+    }
+
+    void load(String model) throws IOException {
+        Interpreter tfLite = new Interpreter(loadModelFile(FlutterLoader.getInstance().getLookupKeyForAsset(model)).asReadOnlyBuffer());
+
+        tfLite.resizeInput(0, new int[]{RECORDING_LENGTH, 1});
+        tfLite.resizeInput(1, new int[]{1});
+    }
+
+    public synchronized void startRecording() {
+        if (recordingThread != null) {
+            return;
+        }
+        shouldContinue = true;
+        recordingThread =
+                new Thread(
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                record();
+                            }
+                        });
+        recordingThread.start();
+    }
+
+    private void record() {
+        android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_AUDIO);
+
+        // Estimate the buffer size we'll need for this device.
+        int bufferSize =
+                AudioRecord.getMinBufferSize(
+                        SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+        if (bufferSize == AudioRecord.ERROR || bufferSize == AudioRecord.ERROR_BAD_VALUE) {
+            bufferSize = SAMPLE_RATE * 2;
+        }
+        short[] audioBuffer = new short[bufferSize / 2];
+
+        AudioRecord record =
+                new AudioRecord(
+                        MediaRecorder.AudioSource.DEFAULT,
+                        SAMPLE_RATE,
+                        AudioFormat.CHANNEL_IN_MONO,
+                        AudioFormat.ENCODING_PCM_16BIT,
+                        bufferSize);
+
+        if (record.getState() != AudioRecord.STATE_INITIALIZED) {
+            Log.e(LOG_TAG, "Audio Record can't initialize!");
+            return;
+        }
+
+        record.startRecording();
+
+        Log.v(LOG_TAG, "Start recording");
+
+        // Loop, gathering audio data and copying it to a round-robin buffer.
+        while (shouldContinue) {
+            int numberRead = record.read(audioBuffer, 0, audioBuffer.length);
+            int maxLength = recordingBuffer.length;
+            int newRecordingOffset = recordingOffset + numberRead;
+            int secondCopyLength = Math.max(0, newRecordingOffset - maxLength);
+            int firstCopyLength = numberRead - secondCopyLength;
+            // We store off all the data for the recognition thread to access. The ML
+            // thread will copy out of this buffer into its own, while holding the
+            // lock, so this should be thread safe.
+            recordingBufferLock.lock();
+            try {
+                System.arraycopy(audioBuffer, 0, recordingBuffer, recordingOffset, firstCopyLength);
+                System.arraycopy(audioBuffer, firstCopyLength, recordingBuffer, 0, secondCopyLength);
+                recordingOffset = newRecordingOffset % maxLength;
+                Log.v("qwerty", "recordingOffset=" + recordingOffset);
+            } finally {
+                recordingBufferLock.unlock();
+            }
+        }
+
+        record.stop();
+        record.release();
     }
 
     public SpeechCommandsPlugin() {

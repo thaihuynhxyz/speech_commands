@@ -29,4 +29,14 @@ class SpeechCommands {
       throw 'Unable to init model $model: ${e.message}';
     }
   }
+
+  static Future<void> record() async {
+    // Errors occurring on the platform side cause invokeMethod to throw
+    // PlatformExceptions.
+    try {
+      return _channel.invokeMethod('record');
+    } on PlatformException catch (e) {
+      throw 'Unable to record audio: ${e.message}';
+    }
+  }
 }
