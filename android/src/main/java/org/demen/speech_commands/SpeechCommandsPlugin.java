@@ -1,5 +1,6 @@
 package org.demen.speech_commands;
 
+import android.app.Activity;
 import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.media.AudioFormat;
@@ -19,6 +20,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import io.flutter.embedding.engine.loader.FlutterLoader;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
+import io.flutter.embedding.engine.plugins.activity.ActivityAware;
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
@@ -27,10 +30,10 @@ import io.flutter.plugin.common.MethodChannel.Result;
 /**
  * SpeechCommandsPlugin
  */
-public class SpeechCommandsPlugin implements FlutterPlugin, MethodCallHandler {
+public class SpeechCommandsPlugin implements ActivityAware, FlutterPlugin, MethodCallHandler {
     private static final String LOG_TAG = SpeechCommandsPlugin.class.getSimpleName();
 
-    private static volatile SpeechCommandsPlugin instance;
+    private Activity mActivity;
 
     /// The MethodChannel that will the communication between Flutter and native Android
     ///
@@ -74,10 +77,10 @@ public class SpeechCommandsPlugin implements FlutterPlugin, MethodCallHandler {
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
         switch (call.method) {
-            case "load": {
+            case "init": {
                 try {
                     final String model = call.argument("model");
-                    getInstance().load(model);
+                    load(model);
                     result.success(null);
                 } catch (Exception e) {
                     result.error("loadError", e.getMessage(), e.getCause());
@@ -180,26 +183,23 @@ public class SpeechCommandsPlugin implements FlutterPlugin, MethodCallHandler {
         record.release();
     }
 
-    public SpeechCommandsPlugin() {
-        // Protect against instantiation via reflection
-        if (instance == null) {
-            instance = this;
-        } else {
-            throw new IllegalStateException("Already initialized.");
-        }
+    @Override
+    public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
+        mActivity = binding.getActivity();
     }
 
-    /**
-     * The instance doesn't get created until the method is called for the first time.
-     */
-    public static synchronized SpeechCommandsPlugin getInstance() {
-        if (instance == null) {
-            synchronized (SpeechCommandsPlugin.class) {
-                if (instance == null) {
-                    instance = new SpeechCommandsPlugin();
-                }
-            }
-        }
-        return instance;
+    @Override
+    public void onDetachedFromActivityForConfigChanges() {
+        mActivity = null;
+    }
+
+    @Override
+    public void onReattachedToActivityForConfigChanges(@NonNull ActivityPluginBinding binding) {
+        mActivity = binding.getActivity();
+    }
+
+    @Override
+    public void onDetachedFromActivity() {
+        mActivity = null;
     }
 }
