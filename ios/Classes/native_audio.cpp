@@ -13,4 +13,4 @@ void native_audio_create() {
 extern "C" __attribute__((visibility("default"))) __attribute__((used))
 void native_audio_start() {
     if (engine) engine->start();
-}
+}`
