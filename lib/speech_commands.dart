@@ -23,8 +23,8 @@ final void Function() nativeAudioStart = nativeTfliteLib
 class SpeechCommands {
   static const MethodChannel _channel = const MethodChannel('speech_commands');
 
-  static Future<String> get platformVersion async {
-    final String version = await _channel.invokeMethod('getPlatformVersion');
+  static Future<String?> get platformVersion async {
+    final String? version = await _channel.invokeMethod('getPlatformVersion');
     return version;
   }
 
@@ -32,7 +32,7 @@ class SpeechCommands {
     // Errors occurring on the platform side cause invokeMethod to throw
     // PlatformExceptions.
     try {
-      return _channel.invokeMethod('load', <String, dynamic>{'model': model});
+      return _channel.invokeMethod('init', <String, dynamic>{'model': model});
     } on PlatformException catch (e) {
       throw 'Unable to init model $model: ${e.message}';
     }

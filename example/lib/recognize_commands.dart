@@ -7,19 +7,19 @@ import 'package:tuple/tuple.dart';
 /// Reads in results from an instantaneous audio recognition model and smoothes them over time.
 class RecognizeCommands {
   // Configuration settings.
-  List<String> labels;
-  int averageWindowDurationMs;
-  double detectionThreshold;
-  int suppressionMs;
-  int minimumCount;
-  int minimumTimeBetweenSamplesMs;
+  late List<String> labels;
+  late int averageWindowDurationMs;
+  late double detectionThreshold;
+  late int suppressionMs;
+  late int minimumCount;
+  late int minimumTimeBetweenSamplesMs;
 
   // Working variables.
   var previousResults = Queue<Tuple2<int, List<double>>>();
-  String previousTopLabel;
-  int labelsCount;
-  int previousTopLabelTime;
-  double previousTopLabelScore;
+  String? previousTopLabel;
+  late int labelsCount;
+  int? previousTopLabelTime;
+  double? previousTopLabelScore;
 
   static const String SILENCE_LABEL = "_silence_";
   static const int MINIMUM_TIME_FRACTION = 4;
@@ -99,27 +99,27 @@ class RecognizeCommands {
     }
 
     // Calculate the average score across all the results in the window.
-    var averageScores = List<double>(labelsCount);
+    var averageScores = List<double?>.filled(labelsCount, null);
     previousResults.forEach((previousResult) {
       final scoresTensor = previousResult.item2;
       int i = 0;
       while (i < scoresTensor.length) {
-        averageScores[i] += scoresTensor[i] / howManyResults;
+        averageScores[i] = scoresTensor[i] / howManyResults;
         ++i;
       }
     });
 
     // Sort the averaged results in descending score order.
-    var sortedAverageScores = List<ScoreForSorting>(labelsCount);
+    var sortedAverageScores = List<ScoreForSorting?>.filled(labelsCount, null);
     for (int i = 0; i < labelsCount; ++i) {
       sortedAverageScores[i] = new ScoreForSorting(averageScores[i], i);
     }
     sortedAverageScores.sort();
 
     // See if the latest top score is enough to trigger a detection.
-    final currentTopIndex = sortedAverageScores[0].index;
+    final currentTopIndex = sortedAverageScores[0]!.index;
     final currentTopLabel = labels[currentTopIndex];
-    final currentTopScore = sortedAverageScores[0].score;
+    final currentTopScore = sortedAverageScores[0]!.score!;
     // If we've recently had another label trigger, assume one that occurs too
     // soon afterwards is a bad result.
     int timeSinceLastTop;
@@ -127,7 +127,7 @@ class RecognizeCommands {
         (previousTopLabelTime == -0x8000000000000000)) {
       timeSinceLastTop = 0x7FFFFFFFFFFFFFFF;
     } else {
-      timeSinceLastTop = currentTimeMS - previousTopLabelTime;
+      timeSinceLastTop = currentTimeMS - previousTopLabelTime!;
     }
     bool isNewCommand;
     if (currentTopScore > detectionThreshold &&
@@ -145,24 +145,24 @@ class RecognizeCommands {
 
 /// Holds information about what's been recognized.
 class RecognitionResult {
-  final String foundCommand;
-  final double score;
+  final String? foundCommand;
+  final double? score;
   final bool isNewCommand;
 
   RecognitionResult(this.foundCommand, this.score, this.isNewCommand);
 }
 
 class ScoreForSorting implements Comparable<ScoreForSorting> {
-  double score;
+  double? score;
   int index;
 
   ScoreForSorting(this.score, this.index);
 
   @override
   int compareTo(ScoreForSorting other) {
-    if (this.score > other.score) {
+    if (this.score! > other.score!) {
       return -1;
-    } else if (this.score < other.score) {
+    } else if (this.score! < other.score!) {
       return 1;
     } else {
       return 0;

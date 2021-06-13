@@ -34,7 +34,6 @@ public:
             mPhase += mPhaseIncrement;
             if (mPhase >= kTwoPi) mPhase -= kTwoPi;
         }
-        LOG
         return oboe::DataCallbackResult::Continue;
     }
 

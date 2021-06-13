@@ -1,16 +1,14 @@
-import 'dart:io';
+import 'dart:async';
+import 'dart:convert';
+import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'dart:async';
-import 'dart:convert';
-
 import 'package:flutter/services.dart';
-import 'package:speech_commands/speech_commands.dart';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:speech_commands_example/recognize_commands.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'dart:developer' as developer;
+import 'package:speech_commands/speech_commands.dart';
+import 'package:speech_commands_example/recognize_commands.dart';
 
 void main() {
   runApp(MyApp());
@@ -37,10 +35,10 @@ class _MyAppState extends State<MyApp> {
   static const int MINIMUM_TIME_BETWEEN_SAMPLES_MS = 30;
   static const String MODEL_FILENAME = 'models/conv_actions_frozen.tflite';
 
-  dynamic _labels = new List<String>();
-  dynamic _displayedLabels = new List<String>();
-  RecognizeCommands _recognizeCommands;
-  PermissionStatus _permissionStatus = PermissionStatus.undetermined;
+  var _labels = <String>[];
+  var _displayedLabels = <String>[];
+  RecognizeCommands? _recognizeCommands;
+  PermissionStatus? _permissionStatus;
 
   @override
   void initState() {
@@ -63,7 +61,7 @@ class _MyAppState extends State<MyApp> {
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPlatformState() async {
     // Platform messages may fail, so we use a try/catch PlatformException.
-    await SpeechCommands.load(MODEL_FILENAME);
+    // await SpeechCommands.load(MODEL_FILENAME);
 
     // If the widget was removed from the tree while the asynchronous platform
     // message was in flight, we want to discard the reply rather than calling
@@ -140,7 +138,8 @@ class _MyAppState extends State<MyApp> {
       _labels = LineSplitter().convert(label);
       _displayedLabels = _labels
           .where((value) => !value.startsWith('_'))
-          .map((e) => '${e.substring(0, 1).toUpperCase()}${e.substring(1)}');
+          .map((e) => '${e.substring(0, 1).toUpperCase()}${e.substring(1)}')
+          .toList();
     });
     return label;
   }
@@ -174,7 +173,7 @@ class _MyAppState extends State<MyApp> {
 class Cell extends StatelessWidget {
   const Cell(
     this.data, {
-    Key key,
+    Key? key,
   })  : assert(
           data != null,
           'A non-null String must be provided to a Text widget.',
